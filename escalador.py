@@ -78,8 +78,7 @@ class Escalacao_Posicao:
 
     def remover_mais_caro(self):
         mais_caro = 0
-        precos_ordenados = self.escalados.values()
-        precos_ordenados.sort(reverse=True)
+        precos_ordenados = sorted(self.escalados.values(), reverse=True)
         for key, value in self.escalados.items():
             if value == precos_ordenados[0]:
                 self.escalados.pop(key)

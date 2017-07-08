@@ -1,5 +1,5 @@
-import urllib2
 import json
+from urllib.request import urlopen
 from pymongo import MongoClient
 from model import AtletasPontos
 from mongoengine import DoesNotExist
@@ -12,7 +12,7 @@ def main():
     rodada = rodada_atual()
     partidas = find_partidas(rodada)
 
-    mercado = json.load(urllib2.urlopen(url_atletas))
+    mercado = json.load(urlopen(url_atletas))
     client = MongoClient('localhost', 27017)
     db = client['cartola']
 
@@ -22,11 +22,11 @@ def main():
     client.close()
 
 def rodada_atual():
-    mercado = json.load(urllib2.urlopen(url_mercado))
+    mercado = json.load(urlopen(url_mercado))
     return mercado['rodada_atual']
 
 def find_partidas(rodada):
-    partidas = json.load(urllib2.urlopen(url_rodada+str(rodada)))
+    partidas = json.load(urlopen(url_rodada+str(rodada)))
     campos_invalidos = (set(['aproveitamento_mandante', 'aproveitamento_visitante', 'partida_data', 'local', 'valida', 'placar_oficial_mandante',
                              'placar_oficial_visitante', 'placar_oficial_visitante', 'url_confronto', 'url_transmissao']))
     partidas = map(lambda partida : filtrar_campos(partida, campos_invalidos), partidas['partidas'])
