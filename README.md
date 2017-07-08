@@ -1,6 +1,6 @@
 # CARTOLA
 
-Roda com python3.6
+Roda com python2.7
 
 # Scripts
 ## crawler
