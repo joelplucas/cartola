@@ -1,5 +1,5 @@
 import json
-from urllib.request import urlopen
+from urllib2 import urlopen
 from pymongo import MongoClient
 from model import AtletasPontos
 from mongoengine import DoesNotExist

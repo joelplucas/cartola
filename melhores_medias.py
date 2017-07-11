@@ -10,7 +10,8 @@ def main(argv):
     atletas_collection = db.atletas_rodada
     partidas = list(db.partidas_rodada.find())
 
-    times_validos = list(times_em_casa(partidas).union(times_primeiros(partidas)))
+    times_validos = list(times_em_casa(partidas).union(times_visitantes_primeiros(partidas)))
+    #times_validos = list(todos_times(partidas))
     goleiros = carregar_atletas(1, min_rodadas, times_validos, atletas_collection)
     laterais = carregar_atletas(2, min_rodadas, times_validos, atletas_collection)
     zagueiros = carregar_atletas(3, min_rodadas, times_validos, atletas_collection)
@@ -31,12 +32,16 @@ def times_em_casa(partidas):
     [times.add(partida['clube_casa_id']) for partida in partidas]
     return times
 
-def times_primeiros(partidas):
+def todos_times(partidas):
+    times = set()
+    [times.add(partida['clube_casa_id']) for partida in partidas]
+    [times.add(partida['clube_visitante_id']) for partida in partidas]
+    return times
+
+def times_visitantes_primeiros(partidas):
     times = set()
     for partida in partidas:
-        if partida['clube_casa_posicao'] < partida['clube_visitante_posicao']:
-            times.add(partida['clube_casa_id'])
-        else:
+        if partida['clube_visitante_posicao'] < partida['clube_casa_posicao']:
             times.add(partida['clube_visitante_id'])
     return times
 
