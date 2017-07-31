@@ -1,34 +1,34 @@
 import json
 from urllib2 import urlopen
 from pymongo import MongoClient
-from model import AtletasPontos
-from mongoengine import DoesNotExist
+from model import Clube, AtletasPontos
 
 url_mercado = "https://api.cartolafc.globo.com/mercado/status"
 url_atletas = "https://api.cartolafc.globo.com/atletas/mercado"
 url_rodada = "https://api.cartolafc.globo.com/partidas/"
 
 def main():
-    rodada = rodada_atual()
-    partidas = find_partidas(rodada)
+    rodada_atual = get_rodada_atual()
 
-    mercado = json.load(urlopen(url_atletas))
     client = MongoClient('localhost', 27017)
     db = client['cartola']
 
-    calcular_pontuacoes(rodada-1, mercado['atletas'])
+    clubes = computar_partidas_todas_rodadas_clubes(rodada_atual-1)
+    mercado = json.load(urlopen(url_atletas))
+    calcular_pontuacao_atletas(rodada_atual-1, mercado['atletas'])
+
     atletas_provaveis = find_atletas_pontuacoes(mercado)
-    salvar_dados(db, partidas, atletas_provaveis)
+    salvar_dados(db, find_partidas(rodada_atual), atletas_provaveis, clubes)
     client.close()
 
-def rodada_atual():
+def get_rodada_atual():
     mercado = json.load(urlopen(url_mercado))
     return mercado['rodada_atual']
 
 def find_partidas(rodada):
     partidas = json.load(urlopen(url_rodada+str(rodada)))
-    campos_invalidos = (set(['aproveitamento_mandante', 'aproveitamento_visitante', 'partida_data', 'local', 'valida', 'placar_oficial_mandante',
-                             'placar_oficial_visitante', 'placar_oficial_visitante', 'url_confronto', 'url_transmissao']))
+    campos_invalidos = (set(['aproveitamento_mandante', 'aproveitamento_visitante', 'partida_data', 'local', 'valida',
+                             'url_confronto', 'url_transmissao']))
     partidas = map(lambda partida : filtrar_campos(partida, campos_invalidos), partidas['partidas'])
     return partidas
 
@@ -46,33 +46,66 @@ def adicionar_clubes(atletas_validos, clubes):
         atleta['ultima_rodada'] = atleta['pontos_num']
     return atletas_validos
 
-def calcular_pontuacoes(ultima_rodada, atletas):
+def calcular_pontuacao_atletas(ultima_rodada, atletas):
     for atleta in atletas:
         ultima_pontuacao = atleta['pontos_num']
         if ultima_pontuacao == 0:
             continue
-        atletaPontos = get_pontuacao_atleta(atleta['atleta_id'])
-        if atletaPontos is None:
-            atletaPontos = AtletasPontos(_id=atleta['atleta_id'])
+        atletaPontos = AtletasPontos.get(atleta['atleta_id'])
         atletaPontos.add_pontuacao(str(ultima_rodada), ultima_pontuacao)
         atletaPontos.save()
-
-def get_pontuacao_atleta(atleta_id):
-    try:
-        return AtletasPontos.objects.get(_id=atleta_id)
-    except DoesNotExist:
-        return None
 
 def filtrar_campos(linha, campos_invalidos):
     for campo in campos_invalidos:
         del linha[campo]
     return linha
 
-def salvar_dados(db, partidas, atletas):
+def computar_partidas_todas_rodadas_clubes(rodada_atual):
+    clubes = {}
+    while rodada_atual > 0:
+        if check_foi_computada(clubes, rodada_atual):
+            break
+        i = 0
+        for partida in find_partidas(rodada_atual):
+            clubes = computar_partida(rodada_atual, clubes, partida)
+            i+= 1
+        rodada_atual -= 1
+    return clubes
+
+def computar_partida(rodada, clubes, partida):
+    clube_casa = get_clube(clubes, partida['clube_casa_id'])
+    clube_casa.computar_partida(partida, 'MANDANTE')
+    clube_casa.computados.append(rodada)
+    clubes[clube_casa._id] = clube_casa
+
+    clube_visitante = get_clube(clubes, partida['clube_visitante_id'])
+    clube_visitante.computar_partida(partida, 'VISITANTE')
+    clube_visitante.computados.append(rodada)
+    clubes[clube_visitante._id] = clube_visitante
+    return clubes
+
+
+def get_clube(clubes, clube_id):
+    if clube_id in clubes:
+        return clubes[clube_id]
+    else:
+        return Clube(_id=clube_id)
+
+def check_foi_computada(clubes, rodada):
+    if len(clubes) == 0:
+        return False
+    if rodada in clubes.values()[0].computados:
+        return True
+    else:
+        return False
+
+def salvar_dados(db, partidas, atletas, clubes):
     db.partidas_rodada.delete_many({})
     db.partidas_rodada.insert_many(partidas)
     db.atletas_rodada.delete_many({})
     db.atletas_rodada.insert_many(atletas)
+    for clube in clubes.values():
+        clube.save()
 
 if __name__ == "__main__":
     main()
