@@ -1,4 +1,5 @@
 from sys import argv
+import pandas as pd
 from pymongo import DESCENDING, MongoClient
 from escalador import Recommender
 
@@ -12,12 +13,12 @@ def main(argv):
 
     times_validos = list(times_em_casa(partidas).union(times_visitantes_primeiros(partidas)))
     #times_validos = list(todos_times(partidas))
-    goleiros = carregar_atletas(1, min_rodadas, times_validos, atletas_collection)
-    laterais = carregar_atletas(2, min_rodadas, times_validos, atletas_collection)
-    zagueiros = carregar_atletas(3, min_rodadas, times_validos, atletas_collection)
-    meias = carregar_atletas(4, min_rodadas, times_validos, atletas_collection)
-    atacantes = carregar_atletas(5, min_rodadas, times_validos, atletas_collection)
-    tecnicos = carregar_atletas(6, min_rodadas, times_validos, atletas_collection)
+    goleiros = carregar_atletas_melhores_medias(1, min_rodadas, times_validos, atletas_collection)
+    laterais = carregar_atletas_melhores_medias(2, min_rodadas, times_validos, atletas_collection)
+    zagueiros = carregar_atletas_melhores_medias(3, min_rodadas, times_validos, atletas_collection)
+    meias = carregar_atletas_melhores_medias(4, min_rodadas, times_validos, atletas_collection)
+    atacantes = carregar_atletas_melhores_medias(5, min_rodadas, times_validos, atletas_collection)
+    tecnicos = carregar_atletas_melhores_medias(6, min_rodadas, times_validos, atletas_collection)
 
     recommender = Recommender(float(argv[1]), argv[2], argv[3], argv[4], argv[5])
     recommender.melhor_time_possivel(goleiros, laterais, zagueiros, meias, atacantes, tecnicos)
@@ -45,8 +46,8 @@ def times_visitantes_primeiros(partidas):
             times.add(partida['clube_visitante_id'])
     return times
 
-def carregar_atletas(posicao, min_rodadas, times, atletas_collection):
-    return list(atletas_collection.find({"jogos_num": {"$gte": min_rodadas}, "posicao_id": posicao, "clube_id": {"$in": times}}).sort([("media_num",DESCENDING)]))
-
+def carregar_atletas_melhores_medias(posicao, min_rodadas, times, atletas_collection):
+    atletas = list(atletas_collection.find({"jogos_num": {"$gte": min_rodadas}, "posicao_id": posicao, "clube_id": {"$in": times}}).sort([("media_num",DESCENDING)]))
+    return pd.DataFrame(list(atletas)).set_index('atleta_id')
 if __name__ == "__main__":
     main(argv)

@@ -1,5 +1,5 @@
 import json
-from urllib2 import urlopen
+from urllib import request
 from pymongo import MongoClient
 from model import Clube, AtletasPontos
 
@@ -14,7 +14,7 @@ def main():
     db = client['cartola']
 
     clubes = computar_partidas_todas_rodadas_clubes(rodada_atual-1)
-    mercado = json.load(urlopen(url_atletas))
+    mercado = json.load(request.urlopen(url_atletas))
     calcular_pontuacao_atletas(rodada_atual-1, mercado['atletas'])
 
     atletas_provaveis = find_atletas_pontuacoes(mercado)
@@ -22,7 +22,7 @@ def main():
     client.close()
 
 def get_rodada_atual():
-    mercado = json.load(urlopen(url_mercado))
+    mercado = json.load(request.urlopen(url_mercado))
     return mercado['rodada_atual']
 
 def find_partidas(rodada):

@@ -19,9 +19,9 @@ class Recommender:
 
     def adicionar_atletas_posicao(self, atletas, escalacao_atletas):
         while len(escalacao_atletas.escalados) < escalacao_atletas.max:
-            escalacao_atletas.adicionar_atleta(atletas[0]['atleta_id'], atletas[0]['preco_num'])
-            self.cartoletas += atletas[0]['preco_num']
-            atletas.pop(0)
+            escalacao_atletas.adicionar_atleta(atletas.index[0], atletas.iloc[0]['preco_num'])
+            self.cartoletas += atletas.iloc[0]['preco_num']
+            atletas.drop(atletas.index[0], inplace=True)
 
     def escalar_limitando_preco(self, goleiros, laterais, zagueiros, meias, atacantes, tecnicos):
         while self.cartoletas > self.cartoletas_max:
@@ -47,10 +47,10 @@ class Recommender:
         return bateu_min
 
     def substituir_atleta(self, atletas, escalacao_atletas):
-        cartoletas_removidas = escalacao_atletas.adicionar_atleta(atletas[0]['atleta_id'], atletas[0]['preco_num'])
+        cartoletas_removidas = escalacao_atletas.adicionar_atleta(atletas.index[0], atletas.iloc[0]['preco_num'])
         self.cartoletas -= cartoletas_removidas
-        self.cartoletas += atletas[0]['preco_num']
-        atletas.pop(0)
+        self.cartoletas += atletas.iloc[0]['preco_num']
+        atletas.drop(atletas.index[0], inplace=True)
         return self.cartoletas
 
     def imprimir_escalacao(self, atletas_collection):
@@ -69,11 +69,11 @@ class Escalacao_Posicao:
 
     def adicionar_atleta(self, atleta_id, preco):
         if len(self.escalados) < self.max:
-            self.escalados[atleta_id] = preco
+            self.escalados[int(atleta_id)] = preco
             mais_caro = preco
         else:
             mais_caro = self.remover_mais_caro()
-            self.escalados[atleta_id] = preco
+            self.escalados[int(atleta_id)] = preco
         return mais_caro
 
     def remover_mais_caro(self):
@@ -87,7 +87,7 @@ class Escalacao_Posicao:
         return mais_caro
 
     def imprimir_atletas(self, atletas_collection):
-        atletas = atletas_collection.find({"atleta_id": {"$in": self.escalados.keys()}})
+        atletas = atletas_collection.find({"atleta_id": {"$in": list(self.escalados)}})
         for atleta in atletas:
             print (str(atleta['atleta_id'])+" = "+atleta['apelido']+
                    " - "+atleta['clube_nome']+u" $"+str(atleta['preco_num']))
