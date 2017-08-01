@@ -13,11 +13,12 @@ def main():
     client = MongoClient('localhost', 27017)
     db = client['cartola']
 
-    clubes = computar_partidas_todas_rodadas_clubes(rodada_atual-1)
     mercado = json.load(request.urlopen(url_atletas))
     calcular_pontuacao_atletas(rodada_atual-1, mercado['atletas'])
 
-    atletas_provaveis = find_atletas_pontuacoes(mercado)
+    atletas_provaveis = list(find_atletas_pontuacoes(mercado))
+    clubes = computar_partidas_todas_rodadas_clubes(rodada_atual-1)
+
     salvar_dados(db, find_partidas(rodada_atual), atletas_provaveis, clubes)
     client.close()
 
@@ -26,15 +27,15 @@ def get_rodada_atual():
     return mercado['rodada_atual']
 
 def find_partidas(rodada):
-    partidas = json.load(urlopen(url_rodada+str(rodada)))
-    campos_invalidos = (set(['aproveitamento_mandante', 'aproveitamento_visitante', 'partida_data', 'local', 'valida',
+    partidas = json.load(request.urlopen(url_rodada+str(rodada)))
+    campos_invalidos = (set(['aproveitamento_mandante', 'aproveitamento_visitante', 'partida_data', 'local',
                              'url_confronto', 'url_transmissao']))
     partidas = map(lambda partida : filtrar_campos(partida, campos_invalidos), partidas['partidas'])
     return partidas
 
 def find_atletas_pontuacoes(mercado):
     campos_invalidos = set(['nome', 'foto', 'variacao_num', 'scout', 'status_id', 'pontos_num'])
-    atletas_validos = filter(lambda atleta: atleta['status_id']==7, mercado['atletas'])
+    atletas_validos = list(filter(lambda atleta: atleta['status_id']==7, mercado['atletas']))
     atletas_validos = adicionar_clubes(atletas_validos, mercado['clubes'])
     atletas_validos = map(lambda atleta : filtrar_campos(atleta, campos_invalidos), atletas_validos)
     return atletas_validos
@@ -65,10 +66,9 @@ def computar_partidas_todas_rodadas_clubes(rodada_atual):
     while rodada_atual > 0:
         if check_foi_computada(clubes, rodada_atual):
             break
-        i = 0
         for partida in find_partidas(rodada_atual):
-            clubes = computar_partida(rodada_atual, clubes, partida)
-            i+= 1
+            if partida['valida'] is True:
+                clubes = computar_partida(rodada_atual, clubes, partida)
         rodada_atual -= 1
     return clubes
 
@@ -94,14 +94,14 @@ def get_clube(clubes, clube_id):
 def check_foi_computada(clubes, rodada):
     if len(clubes) == 0:
         return False
-    if rodada in clubes.values()[0].computados:
+    if rodada in list(clubes.values())[0].computados:
         return True
     else:
         return False
 
 def salvar_dados(db, partidas, atletas, clubes):
     db.partidas_rodada.delete_many({})
-    db.partidas_rodada.insert_many(partidas)
+    db.partidas_rodada.insert_many(list(partidas))
     db.atletas_rodada.delete_many({})
     db.atletas_rodada.insert_many(atletas)
     for clube in clubes.values():
