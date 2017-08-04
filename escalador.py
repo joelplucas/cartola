@@ -3,7 +3,7 @@ from json import dumps
 
 url_escalar_time = "https://api.cartolafc.globo.com/auth/time/salvar"
 
-class Recommender:
+class Escalador:
     def __init__(self, goleiros, laterais, zagueiros, meias, atacantes, tecnicos):
         self.cartoletas = 0
         self.goleiros = goleiros
