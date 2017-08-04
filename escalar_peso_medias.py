@@ -20,10 +20,9 @@ def main(argv):
     atacantes = carregar_atletas_melhores_medias(5, min_rodadas, times_validos, atletas_collection)
     tecnicos = carregar_atletas_melhores_medias(6, min_rodadas, times_validos, atletas_collection)
 
-    recommender = Recommender(float(argv[1]), argv[2], argv[3], argv[4], argv[5])
-    recommender.melhor_time_possivel(goleiros, laterais, zagueiros, meias, atacantes, tecnicos)
-    recommender.escalar_limitando_preco(goleiros, laterais, zagueiros, meias, atacantes, tecnicos)
-    recommender.imprimir_escalacao(atletas_collection)
+    recommender = Recommender(goleiros, laterais, zagueiros, meias, atacantes, tecnicos)
+    recommender.melhor_time_possivel(argv[3], float(argv[4]), argv[5], argv[6], argv[7], argv[8])
+    recommender.escalar_limitando_preco(atletas_collection, argv[1], argv[2])
 
     client.close()
 

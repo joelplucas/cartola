@@ -1,7 +1,9 @@
 from sys import argv
 import pandas as pd
 from pymongo import DESCENDING, MongoClient
-from escalador import Recommender
+from escalador import Recommender, autenticar_cartolaFC
+
+url_esquemas = "https://api.cartolafc.globo.com/esquemas"
 
 def main(argv):
     min_rodadas = 4
@@ -13,28 +15,20 @@ def main(argv):
     clubes = normalizar_clubes(db.clube.find(), partidas)
 
     goleiros = carregar_atletas_probab_menos_gols(1, min_rodadas, clubes, atletas_collection).set_index('atleta_id')
-    laterais = carregar_atletas_probab_menos_gols(2, min_rodadas, clubes, atletas_collection).set_index('atleta_id')
+    laterais = carregar_atletas_prob_saldo_neutro(2, min_rodadas, clubes, atletas_collection).set_index('atleta_id')
     zagueiros = carregar_atletas_probab_menos_gols(3, min_rodadas, clubes, atletas_collection).set_index('atleta_id')
-    meias = carregar_atletas_meias(4, min_rodadas, clubes, atletas_collection).set_index('atleta_id')
+    meias = carregar_atletas_prob_saldo_neutro(4, min_rodadas, clubes, atletas_collection).set_index('atleta_id')
     atacantes = carregar_atletas_probab_mais_gols(5, min_rodadas, clubes, atletas_collection).set_index('atleta_id')
-    tecnicos = carregar_atletas_probab_mais_gols(6, min_rodadas, clubes, atletas_collection).set_index('atleta_id')
+    tecnicos = carregar_atletas_prob_saldo_neutro(6, min_rodadas, clubes, atletas_collection).set_index('atleta_id')
 
-    recommender = Recommender(float(argv[1]), argv[2], argv[3], argv[4], argv[5])
-    recommender.melhor_time_possivel(goleiros, laterais, zagueiros, meias, atacantes, tecnicos)
-    recommender.escalar_limitando_preco(goleiros, laterais, zagueiros, meias, atacantes, tecnicos)
-    recommender.imprimir_escalacao(atletas_collection)
+    recommender = Recommender(goleiros, laterais, zagueiros, meias, atacantes, tecnicos)
+    recommender.melhor_time_possivel(argv[3], float(argv[4]), argv[5], argv[6], argv[7], argv[8])
+    recommender.escalar_limitando_preco(atletas_collection, argv[1], argv[2])
 
     client.close()
 
 def normalizar_clubes(clubes, partidas):
     clubes = pd.DataFrame(list(clubes)).set_index('_id')
-    #clubes['gols_pro_mandante_norm'] = normalizar_df_min_max(clubes['gols_pro_mandante'])
-    #clubes['gols_pro_visitante_norm'] = normalizar_df_min_max(clubes['gols_pro_visitante'])
-
-    #gols sofrido têm peso invertido
-    #clubes['gols_sofridos_mandante_norm'] = -1*normalizar_df_min_max(clubes['gols_sofridos_mandante'])
-    #clubes['gols_sofridos_visitante_norm'] = -1*normalizar_df_min_max(clubes['gols_sofridos_visitante'])
-
     for partida in partidas:
         clubes.loc[partida['clube_casa_id'], 'saldo_pro'] = clubes.loc[partida['clube_casa_id'],'gols_pro_mandante']\
                 + clubes.loc[partida['clube_visitante_id'],'gols_sofridos_visitante']
@@ -62,7 +56,7 @@ def carregar_atletas_probab_gols(index, posicao, min_rodadas, clubes, atletas_co
     atletas['power'] = atletas['saldo_'+index+'_normalizado'] + atletas['media_normalizada']
     return atletas
 
-def carregar_atletas_meias(posicao, min_rodadas, clubes, atletas_collection):
+def carregar_atletas_prob_saldo_neutro(posicao, min_rodadas, clubes, atletas_collection):
     atletas_defesa = carregar_atletas_probab_menos_gols(posicao, min_rodadas, clubes, atletas_collection)
     atletas_ataque = carregar_atletas_probab_mais_gols(posicao, min_rodadas, clubes, atletas_collection)
     atletas_ataque['power'] = (atletas_defesa['power'] + atletas_ataque['power']) / 2
